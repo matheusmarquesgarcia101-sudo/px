@@ -1,11 +1,11 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import { env } from './config/env';
 import chatRouter from './routes/chat';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
@@ -13,6 +13,11 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/chat', chatRouter);
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 app.listen(env.PORT, () => {
   console.log(`Server running at http://localhost:${env.PORT}`);

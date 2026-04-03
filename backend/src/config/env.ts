@@ -9,5 +9,6 @@ export const env = {
 };
 
 if (!env.ANTHROPIC_API_KEY) {
-  throw new Error('ANTHROPIC_API_KEY is not set in .env');
+  const envPath = path.resolve(__dirname, '../../../.env');
+  throw new Error(`ANTHROPIC_API_KEY is not set. Expected .env at: ${envPath}`);
 }
