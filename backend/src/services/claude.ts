@@ -29,7 +29,7 @@ Regras de período: alta ou durationMinutes >= 120 = manha; media ou 30–120 mi
 Não inclua texto, markdown ou explicações fora do JSON.`
 
 function stripMarkdown(text: string): string {
-  return text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
+  return text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
 }
 
 export async function sendMessage(
@@ -51,6 +51,11 @@ export async function sendMessage(
   const block = response.content[0]
   if (block.type !== 'text') throw new Error('Resposta inesperada da Claude')
 
-  const parsed = JSON.parse(stripMarkdown(block.text))
-  return { reply: parsed.reply, tasks: parsed.tasks ?? [] }
+  let parsed: { reply?: string; tasks?: ClaudeTask[] }
+  try {
+    parsed = JSON.parse(stripMarkdown(block.text))
+  } catch {
+    parsed = { reply: block.text, tasks: [] }
+  }
+  return { reply: parsed.reply ?? '', tasks: parsed.tasks ?? [] }
 }
