@@ -1,0 +1,22 @@
+{
+  "name": "px-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "ts-node src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "*",
+    "cors": "*",
+    "dotenv": "*",
+    "express": "*"
+  },
+  "devDependencies": {
+    "@types/cors": "*",
+    "@types/express": "*",
+    "@types/node": "*",
+    "ts-node": "*",
+    "typescript": "*"
+  }
+}
