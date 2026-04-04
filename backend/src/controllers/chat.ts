@@ -9,6 +9,6 @@ export async function chat(req: Request, res: Response): Promise<void> {
     return
   }
 
-  const reply = await sendMessage(message)
-  res.json({ reply })
+  const result = await sendMessage(message, [])
+  res.json({ reply: result.reply, tasks: result.tasks })
 }
