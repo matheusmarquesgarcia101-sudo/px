@@ -12,6 +12,10 @@ export async function chat(req: Request, res: Response): Promise<void> {
     return
   }
 
-  const result = await sendMessage(message, history)
-  res.json(result)
+  try {
+    const result = await sendMessage(message, history)
+    res.json(result)
+  } catch {
+    res.status(500).json({ error: 'Erro ao contactar assistente' })
+  }
 }
