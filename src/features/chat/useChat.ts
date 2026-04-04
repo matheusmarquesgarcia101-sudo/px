@@ -5,6 +5,7 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   taskCount?: number;
+  isError?: boolean;
 };
 
 type UseChatProps = {
@@ -26,7 +27,10 @@ export function useChat({ addStructured }: UseChatProps) {
     setError(null);
 
     try {
-      const history = next.slice(0, -1).map(({ role, content }) => ({ role, content }));
+      const history = next
+        .filter(m => !m.isError)
+        .slice(0, -1)
+        .map(({ role, content }) => ({ role, content }));
       const res = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -46,7 +50,7 @@ export function useChat({ addStructured }: UseChatProps) {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(msg);
-      setMessages([...next, { role: 'assistant', content: `Erro: ${msg}` }]);
+      setMessages([...next, { role: 'assistant', content: `Erro: ${msg}`, isError: true }]);
     } finally {
       setIsLoading(false);
     }
