@@ -2,9 +2,10 @@ import { useTasks } from './features/tasks/useTasks';
 import { TaskInput } from './features/tasks/TaskInput';
 import { TaskList } from './features/tasks/TaskList';
 import { TaskArchive } from './features/tasks/TaskArchive';
+import { Chat } from './features/chat/Chat';
 
 export default function App() {
-  const { active, archived, add, complete, setPriority, setTimeOfDay, sort, setSort } = useTasks();
+  const { active, archived, add, addStructured, complete, setPriority, setTimeOfDay, sort, setSort } = useTasks();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -23,6 +24,7 @@ export default function App() {
         </div>
         <TaskArchive tasks={archived} />
       </div>
+      <Chat addStructured={addStructured} />
     </div>
   );
 }
