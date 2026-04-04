@@ -38,6 +38,7 @@ export function useTasks() {
   };
 
   const addStructured = (input: StructuredTask) => {
+    if (!input.text?.trim()) return;
     const priorityMap: Record<string, Priority> = { media: 'média' };
     const timeOfDayMap: Record<string, TimeOfDay> = { manha: 'manhã' };
 
