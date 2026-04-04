@@ -11,13 +11,18 @@ export function Chat({ addStructured }: Props) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && input.trim()) {
       send(input);
       setInput('');
     }
@@ -86,6 +91,7 @@ export function Chat({ addStructured }: Props) {
           {/* Input */}
           <div className="px-3 py-3 border-t border-slate-100">
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
