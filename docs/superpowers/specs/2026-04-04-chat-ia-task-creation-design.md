@@ -9,9 +9,10 @@ Painel de chat flutuante (floating panel) que permite ao usuário descrever o qu
 ## Fluxo de dados
 
 ```
-Usuário digita → useChat envia { message, history } ao backend
+Usuário digita → useChat envia { message, history } ao backend (via proxy /chat)
   → controller monta messages[] + system prompt
   → Claude retorna JSON { reply, tasks[] }
+  → backend faz strip de markdown e parseia JSON
   → frontend renderiza reply
   → chama addStructured(task) para cada task silenciosamente
   → exibe "✓ N tarefas adicionadas" no balão do assistente
@@ -37,9 +38,9 @@ Usuário digita → useChat envia { message, history } ao backend
   reply: string,
   tasks: {
     text: string,
-    priority?: 'alta' | 'media' | 'baixa',  // sem acento — frontend mapeia para 'média'
-    timeOfDay?: 'manha' | 'tarde' | 'noite', // sem acento — frontend mapeia para 'manhã'
-    duration?: string   // ex: "30m", "2h" — frontend converte para durationMinutes
+    priority?: 'alta' | 'media' | 'baixa',   // sem acento — frontend mapeia para 'média'
+    timeOfDay?: 'manha' | 'tarde' | 'noite',  // sem acento — frontend mapeia para 'manhã'
+    durationMinutes?: number                   // número direto, ex: 30, 120 — default 30
   }[]
 }
 ```
@@ -52,13 +53,15 @@ Usuário digita → useChat envia { message, history } ao backend
 ### Arquivos alterados
 
 **`backend/src/services/claude.ts`**
-- Assinatura: `sendMessage(message: string, history: Message[]): Promise<{ reply: string, tasks: Task[] }>`
+- Assinatura: `sendMessage(message: string, history: Message[]): Promise<{ reply: string, tasks: ClaudeTask[] }>`
 - Monta `messages[]` com history + nova mensagem do usuário
-- System prompt instrui Claude a retornar JSON estruturado
-- Parseia a resposta de Claude como JSON
+- Passa system prompt via campo `system` da API Anthropic
+- `max_tokens: 2048` (de 1024 para comportar JSON com múltiplas tasks)
+- Após receber resposta, faz strip de markdown (`` ```json ... ``` ``) antes de `JSON.parse`
+- Retorna `{ reply, tasks }` parseados
 
 **`backend/src/controllers/chat.ts`**
-- Lê `message` e `history` do body
+- Lê `message` e `history` do body (history default `[]` se ausente)
 - Repassa ao service
 - Retorna `{ reply, tasks }` diretamente
 
@@ -66,53 +69,104 @@ Usuário digita → useChat envia { message, history } ao backend
 
 ```
 Você é um assistente de produtividade. Dado o que o usuário precisa fazer,
-retorne SEMPRE um JSON válido neste formato exato:
+retorne SEMPRE um JSON válido neste formato exato, sem texto fora do JSON:
 {
-  "reply": "<mensagem conversacional breve>",
+  "reply": "<mensagem conversacional breve em português>",
   "tasks": [
     {
-      "text": "<descrição da tarefa>",
+      "text": "<descrição objetiva da tarefa>",
       "priority": "alta" | "media" | "baixa",
       "timeOfDay": "manha" | "tarde" | "noite",
-      "duration": "<ex: 30m, 2h>"
+      "durationMinutes": <número inteiro, ex: 30, 60, 120>
     }
   ]
 }
-Priorize com inteligência: reuniões e prazos = alta, estudos = média, recados = baixa.
-Período: alta priority ou duração >= 2h = manhã; média ou 30m–2h = tarde; baixa ou < 30m = noite.
-Não inclua texto fora do JSON.
+Regras de prioridade: reunião, prazo, urgente, deadline, médico = alta; estudar, revisar, planejar = media; comprar, ligar, enviar = baixa.
+Regras de período: alta ou durationMinutes >= 120 = manha; media ou 30–120 min = tarde; baixa ou < 30 min = noite.
+Não inclua texto, markdown ou explicações fora do JSON.
 ```
 
 ---
 
 ## Frontend
 
+### Vite proxy
+
+Adicionar ao `vite.config.ts` para evitar CORS e hardcode de porta:
+```ts
+server: {
+  proxy: {
+    '/chat': 'http://localhost:3001',
+  }
+}
+```
+Fetch no frontend usa `/chat` (relativo), sem hardcode de host.
+
 ### Novos arquivos
 
 **`src/features/chat/useChat.ts`**
+
+Tipo interno:
+```ts
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+  taskCount?: number; // só no assistente, quando tasks foram criadas
+}
+```
+
 - Estado: `messages: ChatMessage[]`, `isLoading: boolean`, `error: string | null`
-- `send(text: string)`: adiciona mensagem do usuário, chama `POST /chat` com histórico, recebe resposta, chama `addStructured()` para cada task, adiciona resposta do assistente com count de tarefas criadas
-- Histórico enviado ao backend: apenas `{ role, content }` — sem metadados visuais
+- `send(text: string)`:
+  1. Adiciona `{ role: 'user', content: text }` ao estado local
+  2. Monta `history` com as mensagens anteriores (apenas `{ role, content }`)
+  3. `POST /chat` com `{ message: text, history }`
+  4. Para cada task recebida, chama `addStructured(task)`
+  5. Adiciona `{ role: 'assistant', content: reply, taskCount: tasks.length }` ao estado
+- Em caso de erro: adiciona mensagem de erro no chat, seta `error`
 
 **`src/features/chat/Chat.tsx`**
-- Floating button fixo no bottom-right (`fixed bottom-6 right-6`)
-- Abre/fecha painel (toggle)
-- Painel: `w-80 h-96`, área de mensagens com scroll, input no rodapé
-- Balões: usuário alinhado à direita (slate), assistente à esquerda (white/border)
-- Quando tasks criadas: texto `✓ N tarefas adicionadas` abaixo do reply
-- Loading: input desabilitado, balão com "..."
-- Erro: mensagem inline no chat
+- Floating button fixo (`fixed bottom-6 right-6 z-50`) — ícone de chat
+- Toggle abre/fecha painel (`fixed bottom-20 right-6 z-50 w-80 h-96`)
+- Painel: área de mensagens com `overflow-y-auto` + input fixo no rodapé
+- Balões: usuário alinhado à direita (bg-slate-100), assistente à esquerda (bg-white border)
+- Quando `taskCount > 0`: linha `✓ N tarefas adicionadas` abaixo do reply (text-green-600 text-xs)
+- Loading: input `disabled` + balão do assistente com "..."
+- Erro: texto vermelho inline no chat
+- Auto-scroll para última mensagem via `useEffect` + `ref` no fim da lista
 
 ### Arquivo alterado
 
 **`src/features/tasks/useTasks.ts`**
-- Nova função: `addStructured(task: { text: string, priority?: 'alta'|'media'|'baixa', timeOfDay?: 'manha'|'tarde'|'noite', duration?: string })`
-- Mapeia `priority: 'media'` → `'média'` e `timeOfDay: 'manha'` → `'manhã'` (tipos internos com acento)
-- Parseia `duration` string para `durationMinutes` via mesma lógica de `parseInput` (default 30m)
-- Bypassa as heurísticas automáticas — valores de Claude têm precedência
+
+Nova função adicionada e exportada no return:
+```ts
+const addStructured = (task: {
+  text: string,
+  priority?: 'alta' | 'media' | 'baixa',
+  timeOfDay?: 'manha' | 'tarde' | 'noite',
+  durationMinutes?: number
+}) => {
+  const priority: Priority = task.priority === 'media' ? 'média' : (task.priority ?? autoPriority(task.text));
+  const timeOfDay: TimeOfDay = task.timeOfDay === 'manha' ? 'manhã' : (task.timeOfDay ?? autoTimeOfDay(priority, task.durationMinutes ?? 30));
+  const t: Task = {
+    id: crypto.randomUUID(),
+    text: task.text,
+    priority,
+    timeOfDay,
+    durationMinutes: task.durationMinutes ?? 30,
+    createdAt: new Date().toISOString(),
+  };
+  persist([t, ...tasks]);
+};
+```
+
+Mapeamentos:
+- `'media'` → `'média'`, `'manha'` → `'manhã'`
+- Se Claude omitir `priority` ou `timeOfDay`, fallback para heurísticas existentes
 
 **`src/App.tsx`**
-- Importa e renderiza `<Chat addStructured={addStructured} />`
+- Desestrutura `addStructured` de `useTasks()`
+- Renderiza `<Chat addStructured={addStructured} />` dentro do container principal
 
 ---
 
@@ -124,3 +178,5 @@ Não inclua texto fora do JSON.
 - [ ] Loading visível enquanto aguarda resposta
 - [ ] Erro básico exibido no chat (sem crash)
 - [ ] Fluxo ponta a ponta: front → backend → Claude → front → lista
+- [ ] Sem CORS errors (proxy Vite configurado)
+- [ ] JSON com markdown strips tratado corretamente no backend
