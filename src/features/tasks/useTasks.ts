@@ -5,6 +5,13 @@ import { parseInput } from '../../lib/parser/parseInput';
 import { autoPriority } from '../../lib/heuristics/priority';
 import { autoTimeOfDay } from '../../lib/heuristics/timeOfDay';
 
+export type StructuredTask = {
+  text: string;
+  priority?: 'alta' | 'media' | 'baixa';
+  timeOfDay?: 'manha' | 'tarde' | 'noite';
+  durationMinutes?: number;
+};
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>(() => loadTasks());
   const [sort, setSort] = useState<SortKey>('createdAt');
@@ -22,6 +29,33 @@ export function useTasks() {
     const task: Task = {
       id: crypto.randomUUID(),
       text,
+      priority,
+      timeOfDay,
+      durationMinutes,
+      createdAt: new Date().toISOString(),
+    };
+    persist([task, ...tasks]);
+  };
+
+  const addStructured = (input: StructuredTask) => {
+    const priorityMap: Record<string, Priority> = { media: 'média' };
+    const timeOfDayMap: Record<string, TimeOfDay> = { manha: 'manhã' };
+
+    const priority: Priority =
+      input.priority != null
+        ? (priorityMap[input.priority] ?? (input.priority as Priority))
+        : autoPriority(input.text);
+
+    const durationMinutes = input.durationMinutes ?? 30;
+
+    const timeOfDay: TimeOfDay =
+      input.timeOfDay != null
+        ? (timeOfDayMap[input.timeOfDay] ?? (input.timeOfDay as TimeOfDay))
+        : autoTimeOfDay(priority, durationMinutes);
+
+    const task: Task = {
+      id: crypto.randomUUID(),
+      text: input.text,
       priority,
       timeOfDay,
       durationMinutes,
@@ -52,5 +86,5 @@ export function useTasks() {
   const active = sorted(tasks.filter(t => !t.completedAt));
   const archived = tasks.filter(t => t.completedAt);
 
-  return { active, archived, add, complete, setPriority, setTimeOfDay, sort, setSort };
+  return { active, archived, add, addStructured, complete, setPriority, setTimeOfDay, sort, setSort };
 }
