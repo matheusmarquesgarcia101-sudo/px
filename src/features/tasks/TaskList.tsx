@@ -8,11 +8,12 @@ interface Props {
   sort: SortKey;
   onSort: (key: SortKey) => void;
   onComplete: (id: string) => void;
+  onRemove: (id: string) => void;
   onPriority: (id: string, p: Task['priority']) => void;
   onTimeOfDay: (id: string, t: Task['timeOfDay']) => void;
 }
 
-export function TaskList({ tasks, sort, onSort, onComplete, onPriority, onTimeOfDay }: Props) {
+export function TaskList({ tasks, sort, onSort, onComplete, onRemove, onPriority, onTimeOfDay }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -28,6 +29,7 @@ export function TaskList({ tasks, sort, onSort, onComplete, onPriority, onTimeOf
               key={t.id}
               task={t}
               onComplete={onComplete}
+              onRemove={onRemove}
               onPriority={onPriority}
               onTimeOfDay={onTimeOfDay}
             />

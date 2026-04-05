@@ -4,7 +4,7 @@ import { TaskList } from './features/tasks/TaskList';
 import { TaskArchive } from './features/tasks/TaskArchive';
 
 export default function App() {
-  const { active, archived, add, complete, setPriority, setTimeOfDay, sort, setSort } = useTasks();
+  const { active, archived, add, complete, remove, setPriority, setTimeOfDay, sort, setSort } = useTasks();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -17,6 +17,7 @@ export default function App() {
             sort={sort}
             onSort={setSort}
             onComplete={complete}
+            onRemove={remove}
             onPriority={setPriority}
             onTimeOfDay={setTimeOfDay}
           />

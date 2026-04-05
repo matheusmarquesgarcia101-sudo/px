@@ -33,6 +33,9 @@ export function useTasks() {
   const complete = (id: string) =>
     persist(tasks.map(t => t.id === id ? { ...t, completedAt: new Date().toISOString() } : t));
 
+  const remove = (id: string) =>
+    persist(tasks.filter(t => t.id !== id));
+
   const setPriority = (id: string, priority: Priority) =>
     persist(tasks.map(t => t.id === id ? { ...t, priority } : t));
 
@@ -52,5 +55,5 @@ export function useTasks() {
   const active = sorted(tasks.filter(t => !t.completedAt));
   const archived = tasks.filter(t => t.completedAt);
 
-  return { active, archived, add, complete, setPriority, setTimeOfDay, sort, setSort };
+  return { active, archived, add, complete, remove, setPriority, setTimeOfDay, sort, setSort };
 }
