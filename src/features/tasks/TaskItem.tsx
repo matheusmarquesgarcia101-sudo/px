@@ -5,11 +5,12 @@ import { TimeOfDayBadge, cycleTimeOfDay } from '../../components/TimeOfDayBadge'
 interface Props {
   task: Task;
   onComplete: (id: string) => void;
+  onRemove: (id: string) => void;
   onPriority: (id: string, p: Task['priority']) => void;
   onTimeOfDay: (id: string, t: Task['timeOfDay']) => void;
 }
 
-export function TaskItem({ task, onComplete, onPriority, onTimeOfDay }: Props) {
+export function TaskItem({ task, onComplete, onRemove, onPriority, onTimeOfDay }: Props) {
   return (
     <div className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-slate-50 group">
       <button
@@ -27,6 +28,13 @@ export function TaskItem({ task, onComplete, onPriority, onTimeOfDay }: Props) {
           timeOfDay={task.timeOfDay}
           onClick={() => onTimeOfDay(task.id, cycleTimeOfDay(task.timeOfDay))}
         />
+        <button
+          onClick={() => onRemove(task.id)}
+          className="text-slate-300 hover:text-red-400 text-xs px-1 transition-colors"
+          aria-label="Remover"
+        >
+          ✕
+        </button>
       </div>
     </div>
   );
