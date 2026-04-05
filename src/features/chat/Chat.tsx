@@ -3,7 +3,7 @@ import type { StructuredTask } from '../tasks/useTasks';
 import { useChat } from './useChat';
 
 type Props = {
-  addStructured: (task: StructuredTask) => void;
+  addStructured: (tasks: StructuredTask | StructuredTask[]) => void;
 };
 
 export function Chat({ addStructured }: Props) {
