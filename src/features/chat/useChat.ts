@@ -9,7 +9,7 @@ export type ChatMessage = {
 };
 
 type UseChatProps = {
-  addStructured: (task: StructuredTask) => void;
+  addStructured: (tasks: StructuredTask | StructuredTask[]) => void;
 };
 
 export function useChat({ addStructured }: UseChatProps) {
@@ -41,7 +41,7 @@ export function useChat({ addStructured }: UseChatProps) {
 
       const data = await res.json() as { reply: string; tasks: StructuredTask[] };
 
-      data.tasks.forEach(task => addStructured(task));
+      addStructured(data.tasks);
 
       setMessages([
         ...next,

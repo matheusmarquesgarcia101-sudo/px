@@ -37,32 +37,37 @@ export function useTasks() {
     persist([task, ...tasks]);
   };
 
-  const addStructured = (input: StructuredTask) => {
-    if (!input.text?.trim()) return;
+  const addStructured = (inputs: StructuredTask | StructuredTask[]) => {
+    const list = Array.isArray(inputs) ? inputs : [inputs];
     const priorityMap: Record<string, Priority> = { media: 'média' };
     const timeOfDayMap: Record<string, TimeOfDay> = { manha: 'manhã' };
 
-    const priority: Priority =
-      input.priority != null
-        ? (priorityMap[input.priority] ?? (input.priority as Priority))
-        : autoPriority(input.text);
+    const newTasks: Task[] = list
+      .filter(input => input.text?.trim())
+      .map(input => {
+        const priority: Priority =
+          input.priority != null
+            ? (priorityMap[input.priority] ?? (input.priority as Priority))
+            : autoPriority(input.text);
 
-    const durationMinutes = input.durationMinutes ?? 30;
+        const durationMinutes = input.durationMinutes ?? 30;
 
-    const timeOfDay: TimeOfDay =
-      input.timeOfDay != null
-        ? (timeOfDayMap[input.timeOfDay] ?? (input.timeOfDay as TimeOfDay))
-        : autoTimeOfDay(priority, durationMinutes);
+        const timeOfDay: TimeOfDay =
+          input.timeOfDay != null
+            ? (timeOfDayMap[input.timeOfDay] ?? (input.timeOfDay as TimeOfDay))
+            : autoTimeOfDay(priority, durationMinutes);
 
-    const task: Task = {
-      id: crypto.randomUUID(),
-      text: input.text,
-      priority,
-      timeOfDay,
-      durationMinutes,
-      createdAt: new Date().toISOString(),
-    };
-    persist([task, ...tasks]);
+        return {
+          id: crypto.randomUUID(),
+          text: input.text,
+          priority,
+          timeOfDay,
+          durationMinutes,
+          createdAt: new Date().toISOString(),
+        };
+      });
+
+    if (newTasks.length > 0) persist([...newTasks, ...tasks]);
   };
 
   const complete = (id: string) =>
